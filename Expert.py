@@ -147,14 +147,39 @@ print(my_list)
 # 2.9.1 배열
 # pop, insert, extend, frombytes, tofile 메서드 이용
 
-# 커다란 실수 배열의 생성, 저장, 로딩
-from array import array
-from random import random
+# 2.9.4 덱
+from collections import deque
+dq = deque(range(10), maxlen=10)
+dq.rotate(4)
+print(dq)
 
-floats = array('d', )
+dq.rotate(-3)
+print(dq)
 
+dq.appendleft(-1)
+print(dq)
 
+dq.extend([11, 22, 33])
+print(dq)
 
+dq.extendleft([90])
+print(dq)
+
+# 리스트에 구현된 메서드
+# append, clear, __contains__, copy, count
+# __delitem__(p): p 위치의 아이템 삭제
+# extend(i): iterable 한 객체 i를 오른쪽에 추가함
+# __getitem__(p): p 위치의 아이템 가져오기
+# index(e): 처음 e가 나타난 위치를 반환함
+# insert(p, e): p 위치의 항목 앞에 e 요소를 추가함
+# __iter__(): 반복자를 반환함
+# remove(e): e와 같은 값을 가진 첫 항목을 삭제함
+# __setitem__(p, e): s[p] = e, p 위치에 e값을 저장하고 기존 값을 덮어 씀
+
+# 덱에 구현된 메서드
+# copy 대신 __copy__
+# __contains__, index, insert, sort는 없음
+# extendleft, popleft, rotate 등이 있음
 
 
 
