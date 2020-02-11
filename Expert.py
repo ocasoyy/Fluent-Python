@@ -90,8 +90,8 @@ bool(v1)
 v1 + v2
 v1 * 3
 
-
-# 2 시퀀스
+#----------
+# 2장 시퀀스
 # 컨테이너 시퀀스, 균일 시퀀스
 # 2.3 튜플은 단순한 불변 리스트가 아니다.
 # 2.3.2 튜플 언패킹
@@ -182,6 +182,89 @@ print(dq)
 # extendleft, popleft, rotate 등이 있음
 
 
+#----------
+# 3장 딕셔너리와 집합
+# 3.1 일반적인 매핑형
+# collections.abc 모듈은 dict 및 이와 유사한 자료형의 인터페이스를 정의하기 위해
+# Mapping 및 MutableMapping 추상 베이스 클래스 (ABC)를 제공함
+# 딕셔너리는 collections.abc.Mapping의 인스턴스임
+import collections
+
+dict = {'A': 1}
+isinstance(dict, collections.abc.Mapping)
+
+# 표준 라이브러리에서 사용하는 Mapping 형은 모두 dict를 이용하여 구현하므로
+# 키가 해시가능해야 한다.
+# 해시가능: 수명 주기 동안 변하지 않는 해시값을 갖고 있고, 다른 객체와 비교할 수 있음
+# -- 위 정의에서 __hash__, __eq__ 메서드가 필요함
+
+# 예를 들어 리스트는 해시가능하지 않다.
+hash([1, 2])
+
+# 3.3 공통적인 매핑 메서드
+dict = {'A': 1, 'B': 2}
+print(dict['C'])    # 당연히 KeyError가 뜸
+
+# 임시 방편: get
+# KeyError를 처리하지 않고, 값이 존재하지 않는 Key를 호출하였을 때 기본값을 부여하는 get 메서드
+dict = {'A': 1, 'B': 2}
+result = {}
+for key in ['A', 'B', 'C']:
+    value = dict.get(key, 0)
+    result[key] = value
+
+print(result)
+
+# 해결책
+# (1) setdefault
+def count_letters(word):
+    letters = list(word)
+    dict = {}
+    for letter in letters:
+        dict.setdefault(letter, 0)
+        dict[letter] += 1
+
+    return dict
+
+result1 = count_letters('AAABBC')
+print(result1)
+
+# (2) defaultdict
+def count_letters(word):
+    letters = list(word)
+    dict = collections.defaultdict(lambda: 0)
+    for letter in letters:
+        dict[letter] += 1
+
+    return dict
+
+result2 = count_letters('AAABBC')
+print(result2)
+
+# 위 함수는 사실 collections.Counter를 이용하면 쉽게 구현할 수 있다.
+
+# (3): __missing__() 메서드
+# 기본 클래스인 dict에는 정의되어 있지는 않지만, dict는 이 메서드를 알고 있음
+# dict 클래스를 상속하고 __missing__ 메서드를 정의하면,
+# dict.__getitem__() 표준 메서드가 키를 발견할 수 없을 때 KeyError를 발생시키지 않고
+# __missing__ 메서드를 호출한다.
+# __missing__ 메서드는 오직 __getitem__ 메서드를 사용할 때만 호출되기 때문이다.
+
+# dict가 아닌 UserDict를 상속하는 것이 좋다.
+
+class StrKeyDict(collections.UserDict):
+    def __missing__(self, key):
+        # key가 문자열이고 존재하지 않으면 KeyError
+        if isinstance(key, str):
+            raise KeyError(key)
+        return self[str(key)]
+
+    def __contains__(self, key):
+        # 저장된 키가 모두 str 형이므로 self.data에서 바로 조회할 수 있다.
+        return str(key) in self.data
+
+    def __setitem__(self, key, item):
+        self.data[str(key)] = item
 
 
 
