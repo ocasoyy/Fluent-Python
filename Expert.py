@@ -1,6 +1,7 @@
 # Fluent Python
 # 1장 파이썬 데이터 모델
 # 1.1 파이썬 카드 한 벌
+
 from collections import namedtuple
 
 Card = namedtuple('Card', ['rank', 'suit'])
@@ -190,8 +191,8 @@ print(dq)
 # 딕셔너리는 collections.abc.Mapping의 인스턴스임
 import collections
 
-dict = {'A': 1}
-isinstance(dict, collections.abc.Mapping)
+ddict = {'A': 1}
+isinstance(ddict, collections.abc.Mapping)
 
 # 표준 라이브러리에서 사용하는 Mapping 형은 모두 dict를 이용하여 구현하므로
 # 키가 해시가능해야 한다.
@@ -202,15 +203,15 @@ isinstance(dict, collections.abc.Mapping)
 hash([1, 2])
 
 # 3.3 공통적인 매핑 메서드
-dict = {'A': 1, 'B': 2}
-print(dict['C'])    # 당연히 KeyError가 뜸
+ddict = {'A': 1, 'B': 2}
+print(ddict['C'])    # 당연히 KeyError가 뜸
 
 # 임시 방편: get
 # KeyError를 처리하지 않고, 값이 존재하지 않는 Key를 호출하였을 때 기본값을 부여하는 get 메서드
-dict = {'A': 1, 'B': 2}
+ddict = {'A': 1, 'B': 2}
 result = {}
 for key in ['A', 'B', 'C']:
-    value = dict.get(key, 0)
+    value = ddict.get(key, 0)
     result[key] = value
 
 print(result)
@@ -219,12 +220,12 @@ print(result)
 # (1) setdefault
 def count_letters(word):
     letters = list(word)
-    dict = {}
+    ddict = {}
     for letter in letters:
-        dict.setdefault(letter, 0)
-        dict[letter] += 1
+        ddict.setdefault(letter, 0)
+        ddict[letter] += 1
 
-    return dict
+    return ddict
 
 result1 = count_letters('AAABBC')
 print(result1)
@@ -232,11 +233,11 @@ print(result1)
 # (2) defaultdict
 def count_letters(word):
     letters = list(word)
-    dict = collections.defaultdict(lambda: 0)
+    ddict = collections.defaultddict(lambda: 0)
     for letter in letters:
-        dict[letter] += 1
+        ddict[letter] += 1
 
-    return dict
+    return ddict
 
 result2 = count_letters('AAABBC')
 print(result2)
@@ -250,9 +251,9 @@ print(result2)
 # __missing__ 메서드를 호출한다.
 # __missing__ 메서드는 오직 __getitem__ 메서드를 사용할 때만 호출되기 때문이다.
 
-# dict가 아닌 UserDict를 상속하는 것이 좋다.
+# dict가 아닌 Userdict를 상속하는 것이 좋다.
 
-class StrKeyDict(collections.UserDict):
+class StrKeyddict(collections.Userddict):
     def __missing__(self, key):
         # key가 문자열이고 존재하지 않으면 KeyError
         if isinstance(key, str):
@@ -260,11 +261,86 @@ class StrKeyDict(collections.UserDict):
         return self[str(key)]
 
     def __contains__(self, key):
+        # Userddict는 dict를 상속하지 않고
+        # 내부에 실제 항목을 담고 있는 data라는 dict 객체를 갖고 있다.
         # 저장된 키가 모두 str 형이므로 self.data에서 바로 조회할 수 있다.
         return str(key) in self.data
 
     def __setitem__(self, key, item):
         self.data[str(key)] = item
+
+
+# 불변 매핑: 실수로 매핑을 변경하지 못하도록 보장하고 싶은 경우
+# 원래 매핑(changeable)을 변경하면 mappingproxy에 반영되지만,
+# mappingproxy(unchangeable)를 직접 변경할 수는 없다.
+from types import MappingProxyType
+
+changeable = {'A': 1}
+unchangeable = MappingProxyType(changeable)
+
+changeable['B'] = 2
+print(changeable)
+
+# TypeError 발생
+unchangeable['B'] = 2
+
+# 그러나 위에서 changeable['B'] = 2 할당을 통해
+# 동적인 unchangeable 은 changeable 에 대한 변경을 바로 반영한다.
+print(unchangeable)
+
+
+# 집합: set, frozenset (set의 불변형 버전)
+# (1) 집합은 고유함을 보장한다.
+# 집합의 요소는 해시가능해야 한다.
+# set은 해시 가능하지 않지만 frozenset은 해시 가능하다.
+
+# (2) 집합은 중위 연산자를 이용하여 기본적인 집합 연산을 구현한다.
+# | 합집합, & 교집합, - 차집합
+needles = set(list('ab'))
+haystack = set(list('abcde'))
+
+# haystack 안에 들어 있는 needles 항목 수 구하기
+found = len(needles & haystack)
+
+
+# 3.9 dict와 set의 내부 구조
+# dict, set에는 in 연산자 검색을 지원하는 해시 테이블이 있어 검색이 빠르다.
+# dict의 구현 방식을 알아보자.
+
+# 해시 테이블 = Sparse Array(희소 배열)
+# 해시 테이블 안에 있는 항목 = bucket(버킷)
+# dict 해시 테이블에는 각 항목 별로 버킷이 있고, 버킷에는 키에 대한 참조와 항목의 값에 대한 참조가 들어간다.
+# 파이썬은 버킷의 1/3 이상을 비워두려고 노력함. 해시 테이블 항목이 많아지면 더 넓은 공간에 복사하여 버킷 공간을 확보함
+
+# 해시 테이블 안에 항목을 넣을 때, 먼저 항목 키의 해시 값을 계산한다.
+# 내장 자료형은 hash 함수가, 사용자 자료형은 __hash__가 처리한다.
+# 효율성을 높이려먼 비슷해보이는 객체들의 해시값은 상당히 달라져서, 인덱스 공간에 골고루 퍼져야 한다.
+# Ex) 1.01과 1.02의 해시값은 매우 달라야 한다. (실제로 다르다.)
+
+# 해시 테이블 알고리즘
+# my_dict[search_key]에서 값을 가져오기 위해 파이썬은
+# __hash__(search_key)를 호출하여 search_key의 해시값을 가져오고,
+# 해시값의 최하위 비트를 해시 테이블 안의 버킷에 대한 offset으로 사용한다.
+# 찾아낸 버킷이 비어있으면 KeyError를 발생시키고,
+# 비어있지 않으면, 버킷에 들어있는 항목인 (found_key: found_value) 쌍을 검사해서
+# search_key == found_key인지 검사한다. 일치하면 제대로 찾은 것이므로 found_value를 반환함
+
+# search_key와 found_key가 다른 경우에는 해시 충돌이 발생함
+# 해시 충돌은 해시 함수가 임의의 객체를 적은 수의 비트로 매핑하기 때문에 발생함
+# 이렇게 다른 경우(해시 충돌이 발생하는 경우)에는 알고리즘은 해시의 다른 비트들을 조작하여
+# 그 결과를 이용해 다른 버킷을 조회한다. 계속 이 프로세스를 반복한다.
+
+# 항목을 추가/갱신하는 과정도 동일하다.
+# 빈 버킷을 찾으면 새로운 항목을 추가하고, 동일한 키를 가진 버킷을 찾으면 새로운 값으로 갱신한다.
+
+
+# 3.9.3 dict 작동 방식에 의한 영향
+
+
+
+
+
+
 
 
 
