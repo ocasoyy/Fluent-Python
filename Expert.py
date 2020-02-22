@@ -382,14 +382,94 @@ dis(new_print)
 
 
 # 7.5 클로저
+# 함수 본체에서 정의하지 않고 참조하는 non-global 변수를 포함한 확장 범위를 가진 함수
+# 함수를 정의할 때 존재하던 자유 변수에 대한 바인딩을 유지하는 함수
+# 따라서 함수를 정의하는 범위가 사라진 후에 함수를 호출해도 자유변수에 접근할 수 있음
+
+# 예: 이동 평균을 계산하는 고위 함수
+def make_averager():
+    # 아래 series: 지역 변수
+    series = []
+
+    def averager(new_value):
+        # 아래 series: 자유변수 -- 지역 범위에 묶겨있지 않은 변수
+        # series라는 리스트가 가변형이라는 사실을 이용하여
+        # 직접 series에 어떤 값을 할당하지 않았기 때문에 series는 자유변수로 남아있을 수 있다.
+        series.append(new_value)
+        total = sum(series)
+        return total / len(series)
+
+    return averager
+
+avg = make_averager()
+avg(10)
+avg(12)
+avg(14)
+
+# 반환된 averager() 객체를 조사해보면,
+# 파이썬이 컴파일된 함수 본체를 나타내는 __code__ 속성 안에 어떻게 지역변수와 자유변수의 이름을 저장하는지 알 수 있음
+print(avg.__code__.co_varnames)
+print(avg.__code__.co_freevars)
+print(avg.__closure__)
+print(avg.__closure__[0].cell_contents)
 
 
+# 7.6 nonlocal 선언
+def make_averager():
+    count = 0
+    total = 0
+
+    def averager(new_value):
+        # nonlocal 선언을 하지 않으면
+        # 아래에서 count, total에 값을 할당하고 있기 때문에
+        # count, total을 자유변수가 아닌 지역변수로 만든다.
+        nonlocal count, total
+        count += 1
+        total += new_value
+        return total / count
+
+    return averager
+
+avg = make_averager()
+avg(10)
+avg(20)
 
 
+# 7.7 간단한 데커레이터 구현하기
+# 데커레이트된 함수를 호출할 때마다 시간을 측정해서 실행에 소요된 시간/ 전달된 인수/ 반환 값을 출력하는 데커레이터
+from time import perf_counter, sleep
 
+def clock(func):
+    def clocked(*args):
+        start = perf_counter()
 
+        # clocked()에 대한 클로저에 자유 변수 func가 들어가야 이 코드가 작동한다.
+        result = func(*args)
+        elasped = perf_counter() - start
 
+        name = func.__name__
+        arg_str = ', '.join(repr(arg) for arg in args)
+        print("[{}s] {}, {} -> {}".format(elasped, name, arg_str, result))
+        return result
+    # 내부 함수 반환
+    return clocked
 
+@clock
+def snooze(seconds):
+    sleep(seconds)
+
+snooze(2)
+# 위 구문을 실행하면 실제로
+# func: snooze, *args: seconds 과 같이 대응하게 된다.
+# snooze(2) -> clocked 내에서
+# result = snooze(2)
+# 실제 snooze 함수는 return 하는 것이 없으므로 result = None이고, 2초만 기다리게 된다. (sleep)
+
+@clock
+def factorial(n):
+    return 1 if n < 2 else n*factorial(n-1)
+
+factorial(4)
 
 
 
@@ -401,14 +481,16 @@ dis(new_print)
 
 #----------
 # Project
+# mccbcd, avt
 import numpy as np
 import pandas as pd
 from time import perf_counter
 
 mcc = np.random.choice(['1101', '1102', '1103', '1201', '1202', '1203', '1301', '1302', '2101',
-                       '2102', '2201', '2202', '2203', '2301', '2302'], size=(4000000, ), replace=True)
-avt = np.random.choice(['01', '02', '03', '04', '05', '06', '07', '08'], size=(4000000, ), replace=True)
-amt = np.random.randint(low=1000, high=100000, size=(4000000, ))
+                       '2102', '2201', '2202', '2203', '2301', '2302'], size=(100000, ), replace=True)
+avt = np.random.choice(['01', '02', '03', '04', '05', '06', '07', '08'], size=(100000, ), replace=True)
+amt = np.random.randint(low=1000, high=100000, size=(100000, ))
+trans = np.rancom.choice(['t-money', 'food', 'electronic', 'drink', 'clothes'], size=(100000, ), replace=True)
 
 data = pd.DataFrame({'mcc': mcc, 'avt': avt, 'amt': amt})
 
@@ -440,7 +522,44 @@ print(output)
 print("Time: {}".format(perf_counter() - start))
 
 
+# Report
+import pandas as pd
 
+amt = [1000, 2000, 10000, 5000, 3000, 30000, 7000, 800, 1400, 9000]
+id = ['a', 'a', 'b', 'b', 'b', 'c', 'd', 'd', 'e', 'e']
+cat = ['food', 'taxi', 'clothes', 'food', 'drink', 'taxi', 'clothes', 'food', 'drink', 'food']
+payway = ['samsung', 'ic', 'ic', 'samsung', 'ic', 'ic', 'ic', 'samsung', 'samsung', 'ic']
+df = pd.DataFrame({'amt': amt, 'id': id, 'cat': cat, 'payway': payway})
+
+def payway_report(func):
+    def report(data, col):
+        output = data['amt'].groupby([data['payway'], data[col]]).agg(['mean', 'sum'])
+        return output
+    return report
+
+def cat_report(data, col='cat'):
+    result = data['amt'].groupby(data[col]).agg(['mean', 'sum'])
+    return result
+
+def id_report(data, col='id'):
+    result = data['amt'].groupby(data[col]).agg(['mean', 'sum'])
+    return result
+
+cat_report(data=df, col='cat')
+id_report(data=df, col='id')
+
+@payway_report
+def cat_report(data, col='cat'):
+    result = data['amt'].groupby(data[col]).agg(['mean', 'sum'])
+    return result
+
+@payway_report
+def id_report(data, col='id'):
+    result = data['amt'].groupby(data[col]).agg(['mean', 'sum'])
+    return result
+
+cat_report(df, 'cat')
+id_report(df, 'id')
 
 
 
