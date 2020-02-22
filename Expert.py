@@ -398,3 +398,61 @@ dis(new_print)
 
 
 
+
+#----------
+# Project
+import numpy as np
+import pandas as pd
+from time import perf_counter
+
+mcc = np.random.choice(['1101', '1102', '1103', '1201', '1202', '1203', '1301', '1302', '2101',
+                       '2102', '2201', '2202', '2203', '2301', '2302'], size=(4000000, ), replace=True)
+avt = np.random.choice(['01', '02', '03', '04', '05', '06', '07', '08'], size=(4000000, ), replace=True)
+amt = np.random.randint(low=1000, high=100000, size=(4000000, ))
+
+data = pd.DataFrame({'mcc': mcc, 'avt': avt, 'amt': amt})
+
+def mcc_by_avt(data=data, mcc_col=None, avt_col=None, squeeze=False):
+    if mcc_col == None:
+        mcc_col = set(data['mcc'])
+    if avt_col == None:
+        avt_col = set(data['avt'])
+
+    data['mcc_group'] = [data['mcc'][i][0:2] for i in range(data.shape[0])]
+
+    mask1 = data['mcc'].isin(mcc_col)
+    mask2 = data['avt'].isin(avt_col)
+    masked_data = data[mask1][mask2]
+
+    if squeeze:
+        output = masked_data['amt'].groupby([data['mcc_group'], data['avt']]).size().unstack('mcc_group')
+    else:
+        output = masked_data['amt'].groupby([data['mcc'], data['avt']]).size().unstack('mcc')
+
+    return output
+
+start = perf_counter()
+output = mcc_by_avt(data=data,
+                    mcc_col=['1101', '1102', '1103', '1201', '1202', '1203'],
+                    avt_col=['01', '02', '03', '04'],
+                    squeeze=False)
+print(output)
+print("Time: {}".format(perf_counter() - start))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
