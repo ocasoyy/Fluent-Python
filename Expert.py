@@ -472,8 +472,38 @@ def factorial(n):
 factorial(4)
 
 
+# functools.wraps
+# 위와 같이 구현한 clock에는 단점이 있다.
+# 데커레이터된 함수의 __name__과 __doc__ 속성을 가리는 것이다. 확인해보자.
+print(factorial.__name__)    # clocked로 나온다.
+
+import time
+import functools
+
+def clock(func):
+    @functools.wraps(func)
+    def clocked(*args):
+        start = perf_counter()
+
+        # clocked()에 대한 클로저에 자유 변수 func가 들어가야 이 코드가 작동한다.
+        result = func(*args)
+        elasped = perf_counter() - start
+
+        name = func.__name__
+        arg_str = ', '.join(repr(arg) for arg in args)
+        print("[{}s] {}, {} -> {}".format(elasped, name, arg_str, result))
+        return result
+    # 내부 함수 반환
+    return clocked
+
+@clock
+def factorial(n):
+    return 1 if n < 2 else n*factorial(n-1)
+
+print(factorial.__name__)
 
 
+# 7.8.1 functools.lur_cache()를 이용한 메모이제이션
 
 
 
@@ -530,6 +560,9 @@ id = ['a', 'a', 'b', 'b', 'b', 'c', 'd', 'd', 'e', 'e']
 cat = ['food', 'taxi', 'clothes', 'food', 'drink', 'taxi', 'clothes', 'food', 'drink', 'food']
 payway = ['samsung', 'ic', 'ic', 'samsung', 'ic', 'ic', 'ic', 'samsung', 'samsung', 'ic']
 df = pd.DataFrame({'amt': amt, 'id': id, 'cat': cat, 'payway': payway})
+
+# report(*args, **kwargs):
+#        result = func(*args, **kwargs)
 
 def payway_report(func):
     def report(data, col):
