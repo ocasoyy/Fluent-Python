@@ -477,7 +477,7 @@ factorial(4)
 # 데커레이터된 함수의 __name__과 __doc__ 속성을 가리는 것이다. 확인해보자.
 print(factorial.__name__)    # clocked로 나온다.
 
-import time
+from time import perf_counter
 import functools
 
 def clock(func):
@@ -503,7 +503,95 @@ def factorial(n):
 print(factorial.__name__)
 
 
-# 7.8.1 functools.lur_cache()를 이용한 메모이제이션
+# 7.8.1 functools.lru_cache()를 이용한 메모이제이션
+# 재귀함수를 호출할 때 매우 유용하다!
+# Memoization은 이전에 실행한 값비싼 함수의 결과를 저장하여 이전에 사용된 인수에 대해 다시 계산할 필요가 없게 해준다.
+# LRU: Least Recently Used: 사용한지 가장 오래된
+# 오랫동안 사용되지 않은 항목을 버림으로써 캐시가 무한정 커지는 것을 막는다.
+
+# 데커레이터를 일반함수처럼 호출한다.
+@functools.lru_cache()
+@clock
+def fibonacci(n):
+    if n < 2:
+        return n
+    return fibonacci(n-2) + fibonacci(n-1)
+
+fibonacci(6)
+
+# 만약 여기서 lru_cache()를 쓰지 않으면 재귀함수를 호출하기 때문에 굉장히 오랜 시간이 걸린다.
+
+functools.lru_cache(maxsize=128, typed=False)
+# maxsize: 얼마나 많은 호출을 저장할기 결정함
+# 최적의 성능을 내기 위해 maxsize는 2의 제곱이 되어야 함
+# typed=True일 경우 인수의 자료형이 다르면 결과를 따로 저장함
+
+
+#----------
+# Chapter9: 파이썬스러운 객체
+# 9.2 벡터 클래스 부활
+from array import array
+import math
+
+class Vector2d:
+    typecode = 'd'
+
+    def __init__(self, x, y):
+        self.x = float(x)
+        self.y = float(y)
+
+    # 제너레이터 표현식을 통해 요소들을 하나씩 생성한다.
+    def __iter__(self):
+        return (i for i in (self.x, self.y))
+
+    def __repr__(self):
+        class_name = type(self).__name__
+        return '{}({!r}, {!r}'.format(class_name, *self)
+
+    def __str__(self):
+        return str(tuple(self))
+
+    def __bytes__(self):
+        return (bytes([ord(self.typecode)]) +
+                bytes(array(self.typecode, self)))
+
+    def __eq__(self, other):
+        return tuple(self) == tuple(other)
+
+    def __abs__(self):
+        return math.hypot(self.x, self.y)
+
+    def __bool__(self):
+        return bool(abs(self))
+
+
+
+# 9.4 @classmethod, @staticmethod
+# 동작 비교
+class Demo:
+    @classmethod
+    def klassmeth(*args):
+        return args
+
+    @staticmethod
+    def statmeth(*args):
+        return args
+
+Demo.klassmeth()
+Demo.klassmeth('spam')
+
+Demo.statmeth()
+Demo.statmeth('spam')
+
+# @classmethod로 데커레이트된 klassmeth는 호출방법과 무관하게 Demo 클래스를 첫 번째 인수로 받는다.
+
+
+
+
+
+
+
+
 
 
 
@@ -520,9 +608,9 @@ mcc = np.random.choice(['1101', '1102', '1103', '1201', '1202', '1203', '1301', 
                        '2102', '2201', '2202', '2203', '2301', '2302'], size=(100000, ), replace=True)
 avt = np.random.choice(['01', '02', '03', '04', '05', '06', '07', '08'], size=(100000, ), replace=True)
 amt = np.random.randint(low=1000, high=100000, size=(100000, ))
-trans = np.rancom.choice(['t-money', 'food', 'electronic', 'drink', 'clothes'], size=(100000, ), replace=True)
+trans = np.random.choice(['t-money', 'food', 'electronic', 'drink', 'clothes'], size=(100000, ), replace=True)
 
-data = pd.DataFrame({'mcc': mcc, 'avt': avt, 'amt': amt})
+data = pd.DataFrame({'mcc': mcc, 'avt': avt, 'amt': amt, 'trans': trans})
 
 def mcc_by_avt(data=data, mcc_col=None, avt_col=None, squeeze=False):
     if mcc_col == None:
