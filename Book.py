@@ -191,8 +191,8 @@ print(dq)
 # 딕셔너리는 collections.abc.Mapping의 인스턴스임
 import collections
 
-ddict = {'A': 1}
-isinstance(ddict, collections.abc.Mapping)
+dict_ex = {'A': 1}
+isinstance(dict_ex, collections.abc.Mapping)
 
 # 표준 라이브러리에서 사용하는 Mapping 형은 모두 dict를 이용하여 구현하므로
 # 키가 해시가능해야 한다.
@@ -203,15 +203,15 @@ isinstance(ddict, collections.abc.Mapping)
 hash([1, 2])
 
 # 3.3 공통적인 매핑 메서드
-ddict = {'A': 1, 'B': 2}
-print(ddict['C'])    # 당연히 KeyError가 뜸
+dict_ex = {'A': 1, 'B': 2}
+print(dict_ex['C'])    # 당연히 KeyError가 뜸
 
 # 임시 방편: get
 # KeyError를 처리하지 않고, 값이 존재하지 않는 Key를 호출하였을 때 기본값을 부여하는 get 메서드
-ddict = {'A': 1, 'B': 2}
+dict_ex = {'A': 1, 'B': 2}
 result = {}
 for key in ['A', 'B', 'C']:
-    value = ddict.get(key, 0)
+    value = dict_ex.get(key, 0)
     result[key] = value
 
 print(result)
@@ -220,12 +220,12 @@ print(result)
 # (1) setdefault
 def count_letters(word):
     letters = list(word)
-    ddict = {}
+    dict_ex = {}
     for letter in letters:
-        ddict.setdefault(letter, 0)
-        ddict[letter] += 1
+        dict_ex.setdefault(letter, 0)
+        dict_ex[letter] += 1
 
-    return ddict
+    return dict_ex
 
 result1 = count_letters('AAABBC')
 print(result1)
@@ -233,11 +233,11 @@ print(result1)
 # (2) defaultdict
 def count_letters(word):
     letters = list(word)
-    ddict = collections.defaultddict(lambda: 0)
+    dict_ex = collections.defaultddict(lambda: 0)
     for letter in letters:
-        ddict[letter] += 1
+        dict_ex[letter] += 1
 
-    return ddict
+    return dict_ex
 
 result2 = count_letters('AAABBC')
 print(result2)
@@ -586,7 +586,191 @@ Demo.statmeth('spam')
 # @classmethod로 데커레이트된 klassmeth는 호출방법과 무관하게 Demo 클래스를 첫 번째 인수로 받는다.
 
 
+# 9.5 포맷된 출력
+# int: b, float: f, 백분율: %
+format(2/3, "0.1%")
 
+
+#--------------------
+# 11장: 인터페이스: 프로토콜에서 ABC까지
+# 덕 타이핑: 속성과 메서드의 존재로 객체의 타입이 결정된다.
+
+# 11.2 파이썬은 시퀀스를 찾아낸다.
+# __getitem__()으로 부분 구현한 시퀀스 프로토콜
+# __iter__()과 __contains__() 메서드가 구현되어 있지 않지만, 
+# __getitem__() 메서드를 호출해 객체를 반복하고 in 연산자를 사용할 수 있게 해준다. 
+class pirate:
+    def __getitem__(self, pos):
+        return range(0, 100, 10)[pos]
+
+p = pirate()
+
+# 1) __getitem__(): 슬라이싱
+print(p[1])
+
+# 2) __iter__(): 반복
+for i in p:
+    print(i)
+
+# 3) __contains__(): in 연산자 사용
+print(30 in p)
+
+# goose typing: cls가 ABC(추상베이스클래스)일 경우, 즉 cls의 메타클래스가 abc.ABCMeta인 경우 isinstance(obj, cls)를 써도 좋다.
+
+# 11.5. ABC 상속하기
+import collections
+
+Card = collections.namedtuple("Card", ['rank', 'suit'])
+
+class Deck(collections.abc.MutableSequence):
+    ranks = [str(n) for n in range(2, 11)] + list('JQKA')
+    suits = 'spades diamonds clubs hearts'.split()
+
+    def __init__(self):
+        self._cards = [Card(rank, suit) for suit in self.suits
+                                        for rank in self.ranks]
+
+    def __len__(self):
+        return len(self._cards)
+
+    def __getitem__(self, pos):
+        return self._cards[pos]
+
+    def __setitem__(self, pos, value):
+        self._cards[pos] = value
+
+    def __delitem__(self, pos):
+        del self._cards[pos]
+
+    def insert(self, pos, value):
+        self._cards.insert(pos, value)
+
+d = Deck()
+print(d._cards[0])
+
+# MutableSequence를 상속하였으므로 이 클래스의 추상 메서드인 __delitem__(), insert도 구현해야 한다.
+# 하나라도 구현되어 있지 않으면 TypeError가 뜬다.
+# 이 케이스에서는 이것이 바로 MutableSequence ABC가 요구하는 사항이다.
+
+# ABC sequence 제공
+#: __getitem__, __contains__, __iter__, __reversed__, index, count
+
+# ABC MutableSequence 제공
+#: __setitem__, __delitem__, insert, append, reverse, extend, pop, remove, __iadd__
+
+
+# 구상 서브클래스를 구현하고 있다면,
+# ABC로 부터 상속한 메서드를 효율이 더 뛰어난 메서드로 오버라이드 할 수 있다.
+# Ex) __contains__는 시퀀스 전체를 조사하는데, 구상 클래스가 항목들을 정렬된 상태로 유지하고 있다면
+# bisect 함수를 이용하여 __contains__의 속도를 향상시킬 수 있다.
+
+
+## 11.6 표준 라이브러리의 ABC
+# collections.abc에 들어있는 ABC들
+
+# Iterable, Container, Sized
+# 모든 컬렉션은 이 ABC를 상속하거나 적어도 호환되는 프로토콜을 구현해야 한다.
+# Iterable: __iter__()을 통해 반복을, Container는 __contains__()를 통해 in 연산자를,
+# Sized는 __len__()을 통해 len 메서드를 지원한다.
+
+# Sequence, Mapping, Set
+# 주요 불변 컬렉션형으로 각각 가변형 서브클래스(MutableSequence, MutableMapping, MutableSet)가 있다.
+
+# MappingView, Callable, Hashable, Iterator
+
+
+# 11.7 ABC의 정의와 사용
+# Task: Adam이라는 광고 관리 프레임워크를 만들자
+
+# 2개의 추상 메서드
+# load: 항목을 컨테이너 안에 넣는다.
+# pick: 컨테이너 안에서 무작위로 항목 하나를 꺼내서 반환한다.
+# 추상메서드를 종종 @abc.abstractmethod 데커레이터료 표시한다.
+# 위 데커레이터와 def 사이에는 그 어떠한 데커레이터도 올 수 없다. (순서 중요)
+
+# 2개의 구상 메서드
+# loaded: 컨테이너 안에 항목이 하나 이상 들어 있으면 True 반환
+# inspect: 내용물을 변경하지 않고 현재 컨테이너 안에 들어 있는 항목으로부터 만든 정렬된 튜플을 반환한다.
+
+import abc
+
+class Tombola(abc.ABC):
+
+    @abc.abstractmethod
+    def load(self, iterable):
+        """iterable의 항목들을 추가한다."""
+
+    @abc.abstractmethod
+    def pick(self):
+        """
+        무작위로 항목을 하나 제거하고 반환한다.
+        객체가 비어 있을 때 이 메서드를 실행하는 "LookupError"가 발생한다.
+        """
+
+    def loaded(self):
+        """
+        최소 한 개의 항목이 있으면 True, 아니면 False를 반환한다.
+        """
+        return bool(self.inspect())
+
+    def inspect(self):
+        """
+        현재 안에 있는 항목들로 구성된 정렬된 튜플을 반환한다.
+        """
+        items = []
+        while True:
+            try:
+                items.append(self.pick())
+            except LookupError:
+                break
+        self.load(items)
+        return tuple(sorted(items))
+
+
+# 추상 메서드도 실제 구현 코드를 가질 수 있다.
+# 추상 메서드가 실제 구현 코드를 담고 있더라도 서브 클래스는 이 메서드를 오버라이드 해야 한다.
+# ABC 안에서 인터페이스에 정의된 다른 메서드만 이용하는 한 ABC에 구상 메서드를 제공하는 것도 가능하다.
+
+# 11.7.1. ABC 상세구문
+# ABC를 선언할 때는 abc.ABC나 다른 ABC를 상속하는 것이 좋다.
+
+# 11.7.2. Tombola ABC 상속하기
+
+
+
+# 기타 이야기
+# Reverse Iterator
+# __next__()를 정의하여 next 메서드를 호출하였을 때 요소들을 하나씩 돌려줌
+# __next__()를 정의하면 __iter__()는 그냥 self를 돌려줄 수 있음
+class Reverse:
+    """Iterator for looping over a sequence backwards"""
+    def __init__(self, data):
+        self.data = data
+        self.index = len(data)
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        if self.index == 0:
+            raise StopIteration
+        self.index = self.index - 1
+        return self.data[self.index]
+
+rev = Reverse('spam')
+
+pinrt(rev.data)  # 'spam'
+iter(rev)        # <__main__.Reverse object at 0x0000024B1D69FDC8>
+d = next(rev)
+print(d)         # 'm'
+print(rev.index) # 3
+
+# 제너레이터는 __iter__()과 __next__()를 저절로 생성함
+# 지역 변수들과의 실행 상태가 호출 간에 자동으로 보관됨
+# 제너레이터가 종료될 때 자동으로 StopIteration 을 일으킴
+def reverse(data):
+    for index in range(len(data)-1, -1, -1):
+        yield data[index]
 
 
 
